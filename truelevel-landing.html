@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrueLevel — Your chart draws its own levels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700;800&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:   #FBFBFD;
+  --paper2:  #F2F3F6;
+  --ink:     #08090C;
+  --ink2:    #121419;
+  --text:    #14161A;
+  --muted:   #71747E;
+  --hair:    #E3E4E9;
+  --hairdk:  #23262F;
+  --jade:    #00A870;
+  --coral:   #F2604C;
+  --gold:    #E9A23B;
+}
+
+*{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+body{
+  margin:0; background:var(--paper); color:var(--text);
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  font-size:17px; line-height:1.65; letter-spacing:-0.003em;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.display,.price,.stepno{
+  font-family:'Inter Tight','Inter',sans-serif;
+  letter-spacing:-0.032em; line-height:1.03; font-weight:800;
+}
+a{ color:inherit; text-decoration:none; }
+svg{ display:block; max-width:100%; }
+
+.wrap{ max-width:1080px; margin:0 auto; padding:0 28px; }
+.narrow{ max-width:760px; margin:0 auto; padding:0 28px; }
+
+/* ══ nav ══ */
+header{
+  position:sticky; top:0; z-index:50; height:56px;
+  background:rgba(251,251,253,.72); backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid var(--hair);
+}
+nav{ max-width:1080px; margin:0 auto; padding:0 28px; height:56px;
+     display:flex; align-items:center; justify-content:space-between; }
+.mark{ display:flex; align-items:center; gap:9px; font-family:'Inter Tight',sans-serif;
+       font-weight:700; font-size:16px; letter-spacing:-0.02em; }
+.navlink{ font-size:14px; color:var(--muted); font-weight:500; }
+.navlink:hover{ color:var(--text); }
+
+/* ══ buttons ══ */
+.btn{ display:inline-block; font-weight:550; font-size:16px;
+      padding:14px 30px; border-radius:100px; transition:transform .18s ease, background .18s ease; }
+.btn:active{ transform:scale(.975); }
+.btn-fill{ background:var(--ink); color:var(--paper); }
+.btn-fill:hover{ background:#2A2D36; }
+.btn-line{ color:var(--text); border:1px solid var(--hair); background:transparent; }
+.btn-line:hover{ border-color:var(--muted); }
+.btn-light{ background:var(--paper); color:var(--ink); }
+.btn-light:hover{ background:#fff; }
+
+/* ══ hero ══ */
+.hero{ padding:120px 0 0; text-align:center; }
+h1{ font-size:clamp(44px,7.2vw,88px); margin:0 0 26px; }
+.lede{ font-size:clamp(18px,2.2vw,22px); color:var(--muted); max-width:34ch;
+       margin:0 auto 40px; line-height:1.5; letter-spacing:-0.01em; }
+.hero-btns{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+.hero-fine{ margin-top:26px; font-size:14px; color:var(--muted); }
+
+.hero-stage{
+  margin-top:80px; background:var(--ink); border-radius:28px 28px 0 0;
+  padding:56px 40px 0; overflow:hidden;
+}
+@media(max-width:640px){ .hero-stage{ padding:32px 20px 0; border-radius:20px 20px 0 0; } }
+
+/* hero chart animation */
+.cndl{ opacity:0; animation:pop .38s cubic-bezier(.2,.9,.3,1) forwards; }
+@keyframes pop{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;} }
+.sweep{ stroke-dasharray:900; stroke-dashoffset:900; animation:sweep 1.1s cubic-bezier(.65,0,.35,1) 1.15s forwards; }
+@keyframes sweep{ to{ stroke-dashoffset:0; } }
+.late{ opacity:0; animation:pop .45s cubic-bezier(.2,.9,.3,1) 2.15s forwards; }
+@media(prefers-reduced-motion:reduce){
+  .cndl,.late{ opacity:1; animation:none; } .sweep{ stroke-dashoffset:0; animation:none; }
+}
+
+/* ══ showcase (scroll-driven) ══ */
+.showcase{ background:var(--ink); color:var(--paper); padding:0 0 140px; }
+.sc-inner{ display:grid; grid-template-columns:1fr 1fr; gap:80px; align-items:start; }
+.sc-sticky{ position:sticky; top:110px; }
+.sc-panel{
+  background:var(--ink2); border:1px solid var(--hairdk);
+  border-radius:20px; padding:26px;
+}
+.sc-steps > div{
+  min-height:78vh; display:flex; flex-direction:column; justify-content:center;
+  opacity:.28; transition:opacity .5s ease;
+}
+.sc-steps > div.on{ opacity:1; }
+.sc-eyebrow{ font-size:14px; font-weight:600; margin-bottom:14px; }
+.sc-steps h3{ font-size:clamp(28px,3.4vw,40px); margin:0 0 18px; color:var(--paper); }
+.sc-steps p{ color:#9A9DA8; font-size:18px; max-width:38ch; margin:0; line-height:1.6; }
+
+.layer{ opacity:0; transition:opacity .55s ease; }
+.layer.on{ opacity:1; }
+
+@media(max-width:900px){
+  .sc-inner{ grid-template-columns:1fr; gap:0; }
+  .sc-sticky{ position:sticky; top:64px; padding:16px 0 24px; background:var(--ink); z-index:5; }
+  .sc-steps > div{ min-height:auto; padding:34px 0; opacity:1; }
+  .sc-steps h3{ font-size:26px; }
+  .sc-steps p{ font-size:16px; }
+}
+
+/* ══ generic section ══ */
+.sec{ padding:140px 0; }
+@media(max-width:640px){ .sec{ padding:84px 0; } }
+h2{ font-size:clamp(32px,4.6vw,56px); margin:0 0 20px; }
+.sec-lede{ color:var(--muted); font-size:19px; max-width:44ch; margin:0; }
+.center{ text-align:center; }
+.center .sec-lede{ margin-left:auto; margin-right:auto; }
+
+/* ══ steps ══ */
+.steps{ display:grid; grid-template-columns:repeat(3,1fr); gap:56px; margin-top:72px; }
+@media(max-width:860px){ .steps{ grid-template-columns:1fr; gap:44px; } }
+.stepno{ font-size:15px; font-weight:700; color:var(--jade); margin-bottom:14px; }
+.steps h3{ font-size:21px; font-weight:700; margin:0 0 10px; letter-spacing:-0.02em; }
+.steps p{ color:var(--muted); font-size:16px; margin:0; max-width:30ch; }
+
+/* ══ pricing ══ */
+.plans{ display:grid; grid-template-columns:repeat(2,1fr); gap:22px; margin-top:64px; }
+@media(max-width:760px){ .plans{ grid-template-columns:1fr; } }
+.plan{
+  background:#fff; border:1px solid var(--hair); border-radius:22px;
+  padding:40px 34px; display:flex; flex-direction:column;
+}
+.plan.hi{ border-color:var(--ink); }
+.plan-top{ display:flex; align-items:center; gap:10px; margin-bottom:22px; }
+.plan-name{ font-size:16px; font-weight:600; }
+.tag{ font-size:12px; font-weight:600; background:var(--jade); color:#fff;
+      padding:3px 10px; border-radius:100px; }
+.price{ font-size:52px; margin-bottom:4px; }
+.price em{ font-family:'Inter',sans-serif; font-style:normal; font-size:17px;
+           font-weight:450; color:var(--muted); letter-spacing:0; }
+.plan-sub{ color:var(--muted); font-size:14px; margin-bottom:30px; }
+.plan ul{ list-style:none; margin:0 0 34px; padding:0; flex:1; }
+.plan li{ display:flex; gap:11px; align-items:flex-start; padding:8px 0; font-size:15.5px; }
+.tick{ flex-shrink:0; margin-top:5px; }
+.plan .btn{ text-align:center; }
+
+/* ══ disclaimer ══ */
+.legal{ background:var(--paper2); }
+.legal p{ color:var(--muted); font-size:15.5px; margin:0; max-width:66ch; }
+.legal strong{ color:var(--text); font-weight:600; }
+
+/* ══ footer ══ */
+footer{ border-top:1px solid var(--hair); padding:44px 0; }
+.frow{ display:flex; justify-content:space-between; align-items:center; gap:18px; flex-wrap:wrap; }
+.ffine{ color:var(--muted); font-size:13.5px; }
+
+/* reveal */
+.rv{ opacity:0; transition:opacity .7s ease; }
+.rv.on{ opacity:1; }
+@media(prefers-reduced-motion:reduce){ .rv{ opacity:1; } }
+
+a:focus-visible,button:focus-visible{ outline:2px solid var(--jade); outline-offset:3px; border-radius:4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <nav>
+    <a href="#" class="mark">
+      <svg width="22" height="22" viewBox="0 0 24 24">
+        <polyline points="2,19 8,12 13,15 22,3" fill="none" stroke="#00A870" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      TrueLevel
+    </a>
+    <a href="#pricing" class="navlink">Pricing</a>
+  </nav>
+</header>
+
+<!-- ═══════════ HERO ═══════════ -->
+<section class="hero">
+  <div class="narrow">
+    <h1>Your chart draws its own levels.</h1>
+    <p class="lede">Support, resistance, and confirmed breakouts — found automatically, candle by candle.</p>
+    <div class="hero-btns">
+      <a href="#pricing" class="btn btn-fill">Start 7 days free</a>
+      <a href="#showcase" class="btn btn-line">See it work</a>
+    </div>
+    <p class="hero-fine">For TradingView · NSE, indices, and crypto · any timeframe</p>
+  </div>
+
+  <div class="wrap">
+    <div class="hero-stage">
+      <svg viewBox="0 0 900 380" width="100%" role="img" aria-label="Chart with an automatically drawn rising support line and a breakout marker">
+        <g stroke-linecap="round">
+          <g class="cndl" style="animation-delay:.05s">
+            <line x1="90" y1="238" x2="90" y2="300" stroke="#3C4150" stroke-width="3"/>
+            <rect x="76" y="250" width="28" height="34" rx="2" fill="#3C4150"/>
+          </g>
+          <g class="cndl" style="animation-delay:.12s">
+            <line x1="170" y1="240" x2="170" y2="318" stroke="#00A870" stroke-width="3"/>
+            <rect x="156" y="252" width="28" height="42" rx="2" fill="#00A870"/>
+          </g>
+          <g class="cndl" style="animation-delay:.19s">
+            <line x1="250" y1="196" x2="250" y2="268" stroke="#00A870" stroke-width="3"/>
+            <rect x="236" y="208" width="28" height="48" rx="2" fill="#00A870"/>
+          </g>
+          <g class="cndl" style="animation-delay:.26s">
+            <line x1="330" y1="192" x2="330" y2="272" stroke="#3C4150" stroke-width="3"/>
+            <rect x="316" y="204" width="28" height="40" rx="2" fill="#3C4150"/>
+          </g>
+          <g class="cndl" style="animation-delay:.33s">
+            <line x1="410" y1="164" x2="410" y2="236" stroke="#00A870" stroke-width="3"/>
+            <rect x="396" y="176" width="28" height="44" rx="2" fill="#00A870"/>
+          </g>
+          <g class="cndl" style="animation-delay:.40s">
+            <line x1="490" y1="158" x2="490" y2="226" stroke="#3C4150" stroke-width="3"/>
+            <rect x="476" y="170" width="28" height="36" rx="2" fill="#3C4150"/>
+          </g>
+          <g class="cndl" style="animation-delay:.47s">
+            <line x1="570" y1="132" x2="570" y2="200" stroke="#00A870" stroke-width="3"/>
+            <rect x="556" y="144" width="28" height="42" rx="2" fill="#00A870"/>
+          </g>
+          <g class="cndl" style="animation-delay:.54s">
+            <line x1="650" y1="120" x2="650" y2="176" stroke="#00A870" stroke-width="3"/>
+            <rect x="636" y="132" width="28" height="30" rx="2" fill="#00A870"/>
+          </g>
+          <g class="cndl" style="animation-delay:.61s">
+            <line x1="730" y1="66" x2="730" y2="150" stroke="#00A870" stroke-width="3"/>
+            <rect x="716" y="78" width="28" height="58" rx="2" fill="#00A870"/>
+          </g>
+        </g>
+
+        <!-- resistance -->
+        <line class="sweep" x1="250" y1="196" x2="860" y2="128" stroke="#F2604C" stroke-width="2.5" stroke-dasharray="7 6" opacity=".9"/>
+        <!-- support, respected 3 times -->
+        <line class="sweep" style="animation-delay:1.35s" x1="170" y1="318" x2="860" y2="150" stroke="#00A870" stroke-width="3"/>
+
+        <g class="late">
+          <circle cx="170" cy="318" r="5" fill="#08090C" stroke="#00A870" stroke-width="2.5"/>
+          <circle cx="330" cy="272" r="5" fill="#08090C" stroke="#00A870" stroke-width="2.5"/>
+          <circle cx="490" cy="226" r="5" fill="#08090C" stroke="#00A870" stroke-width="2.5"/>
+          <path d="M730 178 L721 192 L739 192 Z" fill="#E9A23B"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SCROLL SHOWCASE ═══════════ -->
+<section class="showcase" id="showcase">
+  <div class="wrap sc-inner">
+
+    <div class="sc-sticky">
+      <div class="sc-panel">
+        <svg viewBox="0 0 460 330" width="100%" role="img" aria-label="Chart demonstrating levels, a confirmed breakout, and a retest">
+          <g stroke-linecap="round">
+            <line x1="46" y1="214" x2="46" y2="276" stroke="#3C4150" stroke-width="3"/><rect x="35" y="226" width="22" height="34" rx="2" fill="#3C4150"/>
+            <line x1="94" y1="220" x2="94" y2="288" stroke="#00A870" stroke-width="3"/><rect x="83" y="232" width="22" height="38" rx="2" fill="#00A870"/>
+            <line x1="142" y1="182" x2="142" y2="248" stroke="#00A870" stroke-width="3"/><rect x="131" y="192" width="22" height="42" rx="2" fill="#00A870"/>
+            <line x1="190" y1="176" x2="190" y2="252" stroke="#3C4150" stroke-width="3"/><rect x="179" y="188" width="22" height="38" rx="2" fill="#3C4150"/>
+            <line x1="238" y1="150" x2="238" y2="216" stroke="#00A870" stroke-width="3"/><rect x="227" y="160" width="22" height="40" rx="2" fill="#00A870"/>
+            <line x1="286" y1="140" x2="286" y2="206" stroke="#3C4150" stroke-width="3"/><rect x="275" y="152" width="22" height="34" rx="2" fill="#3C4150"/>
+            <line x1="334" y1="72" x2="334" y2="152" stroke="#00A870" stroke-width="3"/><rect x="323" y="84" width="22" height="54" rx="2" fill="#00A870"/>
+            <line x1="382" y1="86" x2="382" y2="146" stroke="#3C4150" stroke-width="3"/><rect x="371" y="98" width="22" height="34" rx="2" fill="#3C4150"/>
+            <line x1="424" y1="58" x2="424" y2="128" stroke="#00A870" stroke-width="3"/><rect x="413" y="70" width="22" height="46" rx="2" fill="#00A870"/>
+          </g>
+
+          <!-- L1 : levels -->
+          <g class="layer on" id="L1">
+            <line x1="94" y1="288" x2="450" y2="196" stroke="#00A870" stroke-width="2.8"/>
+            <line x1="142" y1="118" x2="450" y2="106" stroke="#F2604C" stroke-width="2.4" stroke-dasharray="7 6"/>
+            <circle cx="94"  cy="288" r="4.5" fill="#121419" stroke="#00A870" stroke-width="2.2"/>
+            <circle cx="190" cy="252" r="4.5" fill="#121419" stroke="#00A870" stroke-width="2.2"/>
+            <circle cx="286" cy="206" r="4.5" fill="#121419" stroke="#00A870" stroke-width="2.2"/>
+          </g>
+
+          <!-- L2 : breakout -->
+          <g class="layer" id="L2">
+            <path d="M334 176 L324 192 L344 192 Z" fill="#E9A23B"/>
+            <rect x="323" y="300" width="22" height="22" rx="2" fill="#E9A23B"/>
+            <rect x="275" y="312" width="22" height="10" rx="2" fill="#2C303B"/>
+            <rect x="227" y="309" width="22" height="13" rx="2" fill="#2C303B"/>
+          </g>
+
+          <!-- L3 : retest -->
+          <g class="layer" id="L3">
+            <circle cx="382" cy="146" r="11" fill="none" stroke="#00A870" stroke-width="2.6"/>
+            <circle cx="382" cy="146" r="3.5" fill="#00A870"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <div class="sc-steps">
+      <div data-layer="L1" class="on">
+        <div class="sc-eyebrow" style="color:#00A870">Levels</div>
+        <h3>It finds the lines you would have drawn.</h3>
+        <p>Every swing high and low gets tested against every other. Only the lines price has genuinely respected — three touches or more — stay on your chart.</p>
+      </div>
+      <div data-layer="L2">
+        <div class="sc-eyebrow" style="color:#E9A23B">Breakouts</div>
+        <h3>A break only counts once volume agrees.</h3>
+        <p>The candle has to close past the line, and volume has to run above its own average. Wicks and thin moves never trigger a marker.</p>
+      </div>
+      <div data-layer="L3">
+        <div class="sc-eyebrow" style="color:#00A870">Retests</div>
+        <h3>Then it waits for the calmer entry.</h3>
+        <p>After a break, price often returns to test the same level from the other side. TrueLevel marks that moment — usually a better price than the breakout candle.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════ SETUP ═══════════ -->
+<section class="sec">
+  <div class="wrap">
+    <div class="rv">
+      <h2>Set it up once.</h2>
+      <p class="sec-lede">After that it runs on every chart you open, on its own.</p>
+    </div>
+    <div class="steps rv">
+      <div>
+        <div class="stepno">01</div>
+        <h3>Subscribe</h3>
+        <p>Share your TradingView username at checkout. Access is granted within a few hours.</p>
+      </div>
+      <div>
+        <div class="stepno">02</div>
+        <h3>Add to a chart</h3>
+        <p>Find it under Invite-only scripts in your indicators panel. One click.</p>
+      </div>
+      <div>
+        <div class="stepno">03</div>
+        <h3>That's it</h3>
+        <p>Lines, markers, and the day's bias update themselves as new candles close.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ PRICING ═══════════ -->
+<section class="sec" id="pricing" style="padding-top:0">
+  <div class="wrap">
+    <div class="center rv">
+      <h2>Pricing</h2>
+      <p class="sec-lede">Seven days free. Cancel whenever — access ends with your billing period.</p>
+    </div>
+
+    <div class="plans rv">
+      <div class="plan">
+        <div class="plan-top"><span class="plan-name">Monthly</span></div>
+        <div class="price">₹799<em> /month</em></div>
+        <div class="plan-sub">Billed monthly</div>
+        <ul>
+          <li><svg class="tick" width="15" height="11" viewBox="0 0 15 11"><polyline points="1,5.5 5,9.5 14,1" fill="none" stroke="#00A870" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Automatic support &amp; resistance</li>
+          <li><svg class="tick" width="15" height="11" viewBox="0 0 15 11"><polyline points="1,5.5 5,9.5 14,1" fill="none" stroke="#00A870" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Volume-confirmed breakout markers</li>
+          <li><svg class="tick" width="15" height="11" viewBox="0 0 15 11"><polyline points="1,5.5 5,9.5 14,1" fill="none" stroke="#00A870" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Retest entry markers</li>
+          <li><svg class="tick" width="15" height="11" viewBox="0 0 15 11"><polyline points="1,5.5 5,9.5 14,1" fill="none" stroke="#00A870" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Live day-bias panel</li>
+          <li><svg class="tick" width="15" height="11" viewBox="0 0 15 11"><polyline points="1,5.5 5,9.5 14,1" fill="none" stroke="#00A870" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Chart alerts to your phone</li>
+        </ul>
+        <a href="#" class="btn btn-line">Start free trial</a>
+      </div>
+
+      <div class="plan hi">
+        <div class="plan-top"><span class="plan-name">Yearly</span><span class="tag">2 months free</span></div>
+        <div class="price">₹6,999<em> /year</em></div>
+        <div class="plan-sub">Works out to ₹583 a month</div>
+        <ul>
+          <li><svg class="tick" width="15" height="11" viewBox="0 0 15 11"><polyline points="1,5.5 5,9.5 14,1" fill="none" stroke="#00A870" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Everything in Monthly</li>
+          <li><svg class="tick" width="15" height="11" viewBox="0 0 15 11"><polyline points="1,5.5 5,9.5 14,1" fill="none" stroke="#00A870" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>New features as they ship</li>
+          <li><svg class="tick" width="15" height="11" viewBox="0 0 15 11"><polyline points="1,5.5 5,9.5 14,1" fill="none" stroke="#00A870" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Direct support over email</li>
+          <li><svg class="tick" width="15" height="11" viewBox="0 0 15 11"><polyline points="1,5.5 5,9.5 14,1" fill="none" stroke="#00A870" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>One invoice, nothing to track</li>
+        </ul>
+        <a href="#" class="btn btn-fill">Start free trial</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ LEGAL ═══════════ -->
+<section class="sec legal" style="padding:74px 0">
+  <div class="wrap rv">
+    <p><strong>Plainly put:</strong> TrueLevel is a technical charting tool. It marks price levels and patterns on your own chart automatically. It is not investment advice, it makes no recommendation to buy or sell, and it promises no profit — a level that held before is no guarantee it holds again. Trading carries real risk of loss. Every decision stays yours.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap frow">
+    <div class="mark">
+      <svg width="19" height="19" viewBox="0 0 24 24">
+        <polyline points="2,19 8,12 13,15 22,3" fill="none" stroke="#00A870" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      TrueLevel
+    </div>
+    <div class="ffine">support@truelevel.example · Not investment advice · © 2026</div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // fade-in on scroll
+  var rv = document.querySelectorAll('.rv');
+  if (reduce || !('IntersectionObserver' in window)) {
+    rv.forEach(function(el){ el.classList.add('on'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting){ e.target.classList.add('on'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.15 });
+    rv.forEach(function(el){ io.observe(el); });
+  }
+
+  // scroll-driven chart layers
+  var steps  = document.querySelectorAll('.sc-steps > div');
+  var wide   = window.matchMedia('(min-width: 901px)');
+  var order  = ['L1','L2','L3'];
+
+  function setStage(idx){
+    order.forEach(function(id, i){
+      var el = document.getElementById(id);
+      if (!el) return;
+      if (i <= idx) el.classList.add('on'); else el.classList.remove('on');
+    });
+    steps.forEach(function(s, i){
+      if (i === idx) s.classList.add('on'); else s.classList.remove('on');
+    });
+  }
+
+  function showAll(){
+    order.forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) el.classList.add('on');
+    });
+    steps.forEach(function(s){ s.classList.add('on'); });
+  }
+
+  if (!wide.matches || reduce || !('IntersectionObserver' in window)) {
+    showAll();
+  } else {
+    var so = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting){
+          setStage(Array.prototype.indexOf.call(steps, e.target));
+        }
+      });
+    }, { rootMargin: '-45% 0px -45% 0px', threshold: 0 });
+    steps.forEach(function(s){ so.observe(s); });
+  }
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,95 @@
+.shell {
+  min-height: 100vh;
+  background: var(--paper2);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.app {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--paper);
+}
+
+/* on laptop/desktop this isn't a real phone screen, so show it as a
+   floating card instead of a skinny column stretched down the page */
+@media (min-width: 640px) {
+  .shell { display: flex; align-items: flex-start; justify-content: center; padding: 48px 20px; }
+  .app {
+    min-height: auto;
+    border-radius: 28px;
+    box-shadow: 0 1px 2px rgba(8, 9, 12, .04), 0 30px 70px -24px rgba(8, 9, 12, .28);
+    overflow: hidden;
+  }
+}
+
+/* ── top bar ── */
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 8px; }
+.mark { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; }
+.bell {
+  width: 36px; height: 36px; border-radius: 100px; background: var(--paper2);
+  display: flex; align-items: center; justify-content: center; border: none;
+}
+
+/* ── subscription card ── */
+.subWrap { padding: 6px 20px 4px; }
+.subCard { border-radius: 18px; padding: 18px 20px; color: #fff; position: relative; overflow: hidden; }
+.subActive { background: var(--ink); }
+.subWarn { background: linear-gradient(135deg, #1a1400, var(--ink)); border: 1px solid #4a3a12; }
+.subExpired { background: linear-gradient(135deg, #210b09, var(--ink)); border: 1px solid #4a1712; }
+.subTop { display: flex; justify-content: space-between; align-items: flex-start; }
+.subPlan { font-size: 13px; color: #9A9DA8; margin-bottom: 4px; }
+.subStatus { font-weight: 700; font-size: 19px; }
+.subDot { width: 8px; height: 8px; border-radius: 100px; margin-top: 6px; }
+.subDays { font-size: 13px; color: #9A9DA8; margin-top: 10px; }
+.subBtn {
+  display: block; text-align: center; text-decoration: none;
+  margin-top: 14px; width: 100%; padding: 12px; border-radius: 11px; border: none;
+  font-weight: 600; font-size: 14.5px; background: var(--jade); color: var(--ink);
+}
+.subBtnGhost { background: rgba(255, 255, 255, .08); color: #fff; }
+
+/* ── feed ── */
+.feedHead { display: flex; justify-content: space-between; align-items: center; padding: 22px 20px 10px; }
+.feedHead h2 { font-size: 19px; font-weight: 700; margin: 0; }
+.feedHead span { color: var(--muted); font-size: 13px; }
+
+.signal { display: flex; gap: 12px; align-items: flex-start; margin: 0 20px 12px; padding: 14px 16px; border-radius: 14px; background: var(--paper2); }
+.sigIcon { width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: #fff; }
+.sigBuy { background: var(--jade); }
+.sigSell { background: var(--coral); }
+.sigBody { flex: 1; min-width: 0; }
+.sigTop { display: flex; justify-content: space-between; gap: 8px; }
+.sigSym { font-weight: 600; font-size: 15px; }
+.sigTime { color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+.sigDesc { color: var(--muted); font-size: 13.5px; margin-top: 2px; }
+.sigPrice { font-weight: 600; font-size: 13.5px; margin-top: 6px; }
+
+.feedEmpty { margin: 10px 20px 24px; padding: 34px 16px; text-align: center; color: var(--muted); font-size: 13.5px; background: var(--paper2); border-radius: 14px; }
+
+/* ── locked state ── */
+.lockWrap { margin: 10px 20px 24px; position: relative; }
+.lockBlur { filter: blur(5px); opacity: .5; pointer-events: none; user-select: none; }
+.lockCard { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; }
+.lockCard h3 { font-size: 16px; font-weight: 700; margin: 10px 0 6px; }
+.lockCard p { color: var(--muted); font-size: 13.5px; margin: 0 0 16px; max-width: 26ch; }
+.lockCard a { display: inline-block; text-decoration: none; padding: 11px 26px; border-radius: 100px; background: var(--ink); color: #fff; border: none; font-weight: 600; font-size: 14px; }
+
+.legalFine { padding: 18px 20px 60px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+
+/* ── disclaimer gate ── */
+.gate {
+  position: fixed; inset: 0; background: var(--paper); z-index: 100;
+  display: flex; flex-direction: column; justify-content: center; padding: 28px;
+  max-width: 480px; margin: 0 auto;
+}
+.gate h2 { font-size: 22px; font-weight: 700; margin: 0 0 12px; }
+.gate p { color: var(--muted); font-size: 14.5px; line-height: 1.6; margin: 0 0 22px; max-width: 36ch; }
+.gateLabel { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--text); margin-bottom: 22px; }
+.gateLabel input { margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; }
+.gateBtn {
+  width: 100%; padding: 14px; border-radius: 12px; border: none;
+  font-weight: 600; font-size: 15px; background: var(--hair); color: var(--muted);
+}
+.gateBtn.gateBtnReady { background: var(--ink); color: #fff; cursor: pointer; }
