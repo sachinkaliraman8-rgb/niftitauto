@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "./app.module.css";
 import DisclaimerGate from "@/components/app/DisclaimerGate";
+import InstallAppButton from "@/components/InstallAppButton";
 import { createClient } from "@/lib/supabase/server";
 import {
   getUserPurchases,
@@ -64,6 +65,7 @@ export default async function AppFeedPage() {
             Niftit
           </div>
           <div style={{ display: "flex", gap: 8 }}>
+            <InstallAppButton compact />
             <button type="button" className={styles.bell} aria-label="Notifications" disabled>
               <svg width="17" height="17" viewBox="0 0 24 24">
                 <path
