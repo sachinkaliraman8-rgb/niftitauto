@@ -32,18 +32,19 @@ export default async function AppFeedPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("disclaimer_accepted_at")
-    .eq("id", user!.id)
-    .single();
+  // Independent queries — run together instead of one-after-another so a
+  // page load is one network round-trip's worth of latency, not three.
+  // getRecentSignals is RLS-gated to active subscribers already, so it's
+  // safe to fetch unconditionally rather than waiting on `current` first.
+  const [{ data: profile }, purchases, signals] = await Promise.all([
+    supabase.from("profiles").select("disclaimer_accepted_at").eq("id", user!.id).single(),
+    getUserPurchases(user!.id),
+    getRecentSignals(20),
+  ]);
 
-  const purchases = await getUserPurchases(user!.id);
   const current = purchases.find((p) => getDisplayStatus(p) === "active");
   const subState = getSubscriptionState(current);
   const remaining = current ? getDaysRemaining(current.expires_at) : 0;
-
-  const signals = current ? await getRecentSignals(20) : [];
 
   return (
     <div className={styles.shell}>
