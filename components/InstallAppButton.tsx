@@ -7,18 +7,25 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+type Platform = "ios-safari" | "ios-other-browser" | "android-or-other";
+
 export default function InstallAppButton({ compact = false }: { compact?: boolean }) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isIOS, setIsIOS] = useState(false);
+  const [platform, setPlatform] = useState<Platform>("android-or-other");
   const [isStandalone, setIsStandalone] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as unknown as { standalone?: boolean }).standalone === true;
     setIsStandalone(standalone);
-    setIsIOS(/iphone|ipad|ipod/i.test(window.navigator.userAgent));
+
+    const ua = window.navigator.userAgent;
+    const isIOSDevice = /iphone|ipad|ipod/i.test(ua);
+    const isIOSOtherBrowser = /CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua);
+    setPlatform(isIOSDevice ? (isIOSOtherBrowser ? "ios-other-browser" : "ios-safari") : "android-or-other");
 
     function onBeforeInstallPrompt(e: Event) {
       e.preventDefault();
@@ -39,9 +46,19 @@ export default function InstallAppButton({ compact = false }: { compact?: boolea
       return;
     }
     // Chrome hasn't fired beforeinstallprompt yet (or won't on this device/
-    // browser) and this isn't iOS Safari — fall back to manual instructions
-    // rather than hiding the button entirely.
+    // browser) — fall back to manual, platform-specific instructions rather
+    // than hiding the button entirely.
     setShowHint(true);
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.origin);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard access denied — the link is still shown as plain text below
+    }
   }
 
   return (
@@ -64,17 +81,48 @@ export default function InstallAppButton({ compact = false }: { compact?: boolea
         <div className="ios-hint-backdrop" onClick={() => setShowHint(false)}>
           <div className="ios-hint-card" onClick={(e) => e.stopPropagation()}>
             <p style={{ fontWeight: 600, marginBottom: 8 }}>Install Niftit</p>
-            {isIOS ? (
+
+            {platform === "ios-safari" && (
               <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 4 }}>
                 Tap the Share icon <ShareGlyph /> in Safari&rsquo;s toolbar, then choose{" "}
                 <strong>&ldquo;Add to Home Screen&rdquo;</strong>.
               </p>
-            ) : (
+            )}
+
+            {platform === "ios-other-browser" && (
+              <>
+                <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 12 }}>
+                  On iPhone, apps can only be installed from <strong>Safari</strong> — Apple
+                  doesn&rsquo;t allow other browsers to do this. Open this link in Safari, then
+                  tap the Share icon <ShareGlyph /> → <strong>&ldquo;Add to Home Screen&rdquo;</strong>.
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "center",
+                    background: "var(--paper2)",
+                    borderRadius: 10,
+                    padding: "8px 10px",
+                  }}
+                >
+                  <span style={{ fontSize: 13, color: "var(--muted)", flex: 1, wordBreak: "break-all" }}>
+                    {typeof window !== "undefined" ? window.location.origin : ""}
+                  </span>
+                  <button type="button" onClick={copyLink} className="btn btn-line btn-sm" style={{ flexShrink: 0 }}>
+                    {copied ? "Copied" : "Copy link"}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {platform === "android-or-other" && (
               <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 4 }}>
                 Open the browser menu (⋮ top-right) and choose{" "}
                 <strong>&ldquo;Install app&rdquo;</strong> or <strong>&ldquo;Add to Home screen&rdquo;</strong>.
               </p>
             )}
+
             <button type="button" className="btn btn-line btn-sm" style={{ marginTop: 14 }} onClick={() => setShowHint(false)}>
               Got it
             </button>
